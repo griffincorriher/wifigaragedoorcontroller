@@ -18,32 +18,40 @@
 #define DOOR2MAGNET1         2   // d4
 #define DOOR2MAGNET2         0   // d3
 
+// Initial door status value
 int door1magnet1status = 1;
 int door1magnet2status = 1;
 int door2magnet1status = 1;
 int door2magnet2status = 1;
 
+// Last door status value
 unsigned long lastDoor1Magnet1Change = 0;
 unsigned long lastDoor1Magnet2Change = 0;
 unsigned long lastDoor2Magnet1Change = 0;
 unsigned long lastDoor2Magnet2Change = 0;
 
-const long magnetDebounceDelay = 500;
+// Garage door intervals
+static unsigned long lastDoorStateCheck = 0;
+const int numButtons = 2;  // Number of garage door buttons
+const long debounceDelay = 10;  // Debounce delay for button toggle
+const long doorStateInterval = 1000;  // Interval for checking door status
+const long magnetDebounceDelay = 500;   // Debounce delay for magnetic read switch
 
-
-unsigned long wifi_led_previousMillis = 0; // Tracks the last time the LED was updated
-unsigned long led_interval = 200;         // Initial interval
+// Wifi intervals and led state
 bool ledState = LOW;                      // Tracks the current state of the LED
+unsigned long wifi_led_previousMillis = 0; // Tracks the last time the LED was updated
 const long notconnected_led_interval = 20; // Interval for NOT CONNECTED state
 const long connected_led_on_interval = 100; // ON time when CONNECTED
 const long connected_led_off_interval = 10000; // OFF time when CONNECTED
-char command[30] = "default";
 
-const int numButtons = 2;       
-const long debounceDelay = 10;
+char command[30] = "default";
 
 // Array to store the last press time for each button
 unsigned long lastPressTime[numButtons] = {0, 0};  // One entry for each button
+
+// Maybe switch to this to be more dynamic?
+//std::vector<unsigned long> lastPressTime(numButtons, 0); // Initializes all to 0
+
 
 void setup() {
   
@@ -63,8 +71,13 @@ void setup() {
 
 void loop() {
   flash_wifi_led();
+  
   take_serial_commands();
-  get_door_states();  
+  
+  if (currentMillis - lastDoorStateCheck >= doorStateInterval) {
+    lastDoorStateCheck = currentMillis;
+    get_door_states();
+  }
 }
 
 
@@ -160,19 +173,23 @@ void take_serial_commands() {
     Serial.println("'");
 
     // Check if the command matches "off"
-    if (strcmp(command, "off") == 0) {
+    if (strcmp(command, "wifioff") == 0) {
       Serial.println("Turning off wifi");
       WiFi.disconnect();
       WiFi.mode(WIFI_OFF);
-    } else if (strcmp(command, "on") == 0) {
+      
+    } else if (strcmp(command, "wifion") == 0) {
       Serial.println("Turning on wifi");
       wifiSetup();
+      
     } else if (strcmp(command, "toggledoor1") == 0) {
       Serial.println("Toggling door 1");
       toggle_button(DOOR1CONTROL, 0);
+      
     } else if (strcmp(command, "toggledoor2") == 0) {
       Serial.println("Toggling door 2");
       toggle_button(DOOR2CONTROL, 1);
+      
     } else {
       Serial.println("Unknown command");
     }
