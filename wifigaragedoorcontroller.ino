@@ -9,15 +9,26 @@
 #define WIFI_SSID "SSID"
 #define WIFI_PASS "PASSWORD"
 
-#define DOOR1CONTROL         13  // d7
-#define DOOR1MAGNET1         12  // d6
+#define DOOR1MAGNET1         13  // d7
+#define DOOR1CONTROL         12  // d6
 #define DOOR1MAGNET2         14  // d5
 
-#define DOOR2CONTROL             5   // d1
-#define WIFI_LED         4   // d2
-#define DOOR2MAGNET1         0   // d3
-#define DOOR2MAGNET2         2   // d4
+#define DOOR2CONTROL         5   // d1
+#define WIFI_LED             4   // d2
+#define DOOR2MAGNET1         2   // d4
+#define DOOR2MAGNET2         0   // d3
 
+int door1magnet1status = 1;
+int door1magnet2status = 1;
+int door2magnet1status = 1;
+int door2magnet2status = 1;
+
+unsigned long lastDoor1Magnet1Change = 0;
+unsigned long lastDoor1Magnet2Change = 0;
+unsigned long lastDoor2Magnet1Change = 0;
+unsigned long lastDoor2Magnet2Change = 0;
+
+const long magnetDebounceDelay = 500;
 
 
 unsigned long wifi_led_previousMillis = 0; // Tracks the last time the LED was updated
@@ -52,7 +63,8 @@ void setup() {
 
 void loop() {
   flash_wifi_led();
-  take_serial_commands();  
+  take_serial_commands();
+  get_door_states();  
 }
 
 
@@ -173,5 +185,47 @@ void trim(char* str) {
   while (len > 0 && isspace(str[len - 1])) {
     str[len - 1] = '\0';
     len--;
+  }
+}
+
+
+void get_door_states() {
+  unsigned long currentMillis = millis();
+  
+  int currentDoor1Magnet1Status = digitalRead(DOOR1MAGNET1);
+  int currentDoor1Magnet2Status = digitalRead(DOOR1MAGNET2);
+  int currentDoor2Magnet1Status = digitalRead(DOOR2MAGNET1);
+  int currentDoor2Magnet2Status = digitalRead(DOOR2MAGNET2);
+
+  // Check and print changes for door1magnet1
+  if (currentDoor1Magnet1Status != door1magnet1status && currentMillis - lastDoor1Magnet1Change > magnetDebounceDelay) {
+    door1magnet1status = currentDoor1Magnet1Status;
+    lastDoor1Magnet1Change = currentMillis; // Update the debounce timer
+    Serial.print("Door1 Magnet1 changed to: ");
+    Serial.println(door1magnet1status);
+  }
+
+  // Check and print changes for door1magnet2
+  if (currentDoor1Magnet2Status != door1magnet2status && currentMillis - lastDoor1Magnet2Change > magnetDebounceDelay) {
+    door1magnet2status = currentDoor1Magnet2Status;
+    lastDoor1Magnet2Change = currentMillis; // Update the debounce timer
+    Serial.print("Door1 Magnet2 changed to: ");
+    Serial.println(door1magnet2status);
+  }
+
+  // Check and print changes for door2magnet1
+  if (currentDoor2Magnet1Status != door2magnet1status && currentMillis - lastDoor2Magnet1Change > magnetDebounceDelay) {
+    door2magnet1status = currentDoor2Magnet1Status;
+    lastDoor2Magnet1Change = currentMillis; // Update the debounce timer
+    Serial.print("Door2 Magnet1 changed to: ");
+    Serial.println(door2magnet1status);
+  }
+
+  // Check and print changes for door2magnet2
+  if (currentDoor2Magnet2Status != door2magnet2status && currentMillis - lastDoor2Magnet2Change > magnetDebounceDelay) {
+    door2magnet2status = currentDoor2Magnet2Status;
+    lastDoor2Magnet2Change = currentMillis; // Update the debounce timer
+    Serial.print("Door2 Magnet2 changed to: ");
+    Serial.println(door2magnet2status);
   }
 }
